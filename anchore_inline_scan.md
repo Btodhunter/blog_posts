@@ -10,7 +10,7 @@ To run the script on your workstation, run it directly from github using the fol
   curl -s https://raw.githubusercontent.com/anchore/ci-tools/scripts/inline_scan | bash -s -- [options] <IMAGE_NAME>
   ```
 
-## Examples for utilizing the inline_scan script
+## Examples
 
 Pull multiple images from dockerhub, scan and generate reports.
 ```bash
@@ -45,7 +45,7 @@ All the following examples can be found in this repository - https://github.com/
 ## CircleCI implementation
 CircleCI version 2.0+ allows access to the docker daemon with the `setup_remote_docker` job step. By using this functionality, combined with an official docker:stable image, we can build, scan, and push our images within the same job. This workflow requires the following environment variables - `DOCKER_USER, DOCKER_PASS` - to be set in a context called `dockerhub` in your CircleCI account settings at `settings -> context -> create`
 
-#### .circleci/config.yml
+#### config.yml - [Github Link](https://github.com/Btodhunter/ci-demos/blob/master/.circleci/config.yml)
 ```yaml
 version: 2.1
 jobs:
@@ -83,7 +83,7 @@ workflows:
 ```
 
 ## GitLab implementation
-#### .gitlab-ci.yml
+#### .gitlab-ci.yml - [Github Link](https://github.com/Btodhunter/ci-demos/blob/master/.gitlab-ci.yml)
 ```yaml
 variables:
   IMAGE_NAME: ${CI_REGISTRY_IMAGE}/build:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHA}
@@ -114,7 +114,7 @@ container_build:
 ```
 
 ## Codeship implementation
-#### codeship-services.yml
+#### codeship-services.yml - [Github Link](https://github.com/Btodhunter/ci-demos/blob/master/codeship-services.yml)
 ```yaml
 dind:
   add_docker: true
@@ -125,7 +125,7 @@ dind:
   encrypted_env_file: env.encrypted
 ```
 
-#### codeship-steps.yml
+#### codeship-steps.yml - [Github Link](https://github.com/Btodhunter/ci-demos/blob/master/codeship-steps.yml)
 ```yaml
 - name: build-scan
   service: dind
@@ -141,7 +141,7 @@ dind:
 ```
 
 ## Jenkins pipeline implementation
-#### Jenkinsfile
+#### Jenkinsfile - [Github Link](https://github.com/Btodhunter/ci-demos/blob/master/Jenkinsfile)
 ```groovy
 pipeline{
     agent {
@@ -178,7 +178,7 @@ pipeline{
 ```
 
 ## TravisCI implementation
-#### .travis.yml
+#### .travis.yml - [Github Link](https://github.com/Btodhunter/ci-demos/blob/master/.travis.yml)
 ```yaml
 language: node_js
 
@@ -188,7 +188,7 @@ services:
 env:
   - IMAGE_NAME="btodhunter/anchore-ci-demo" IMAGE_TAG="travisci"
 
-before_install:
+script:
   - docker build -t "${IMAGE_NAME}:ci" .
   - curl -s "https://raw.githubusercontent.com/anchore/ci-tools/scripts/inline_scan" | bash -s -- "${IMAGE_NAME}:ci"
   - echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
@@ -197,7 +197,7 @@ before_install:
 ```
 
 ## AWS CodeBuild implementation
-#### buildspec.yml
+#### buildspec.yml - [Github Link](https://github.com/Btodhunter/ci-demos/blob/master/buildspec.yml)
 ```yaml
 version: 0.2
 
@@ -219,7 +219,7 @@ For CI/CD tools that don't support access to the docker daemon, the anchore/inli
 ## Codefresh implementation
 For this job to run successfully, the following environment variables must be setup - `IMAGE_NAME, IMAGE_TAG, DOCKER_USER, DOCKER_PASS`. These variables can be set in the Codefresh console at `settings -> pipelines -> environment variables`. This method also requires setting up a Codefresh image registry token at `user settings -> codefresh registry -> generate`, this token can then be used in the `DOCKER_PASS` variable to give anchore engine pull permissions.
 
-#### codefresh.yml
+#### codefresh.yml - [Github Link](https://github.com/Btodhunter/ci-demos/blob/master/codefresh.yml)
 ```yaml
 version: '1.0'
 steps:
@@ -269,7 +269,7 @@ steps:
 ```
 
 ## GitLab implementation
-#### .gitlab-ci.yml
+#### .gitlab-ci.yml - [Github Link](https://github.com/Btodhunter/ci-demos/blob/master/.gitlab-ci.yml)
 ```yaml
 variables:
   IMAGE_NAME: ${CI_REGISTRY_IMAGE}/build:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHA}
