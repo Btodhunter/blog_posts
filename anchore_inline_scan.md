@@ -1,5 +1,14 @@
 # Introducing the Anchore Engine inline scan!
+Anchore Engine is now available as an all-in-one stateless container - `anchore/inline-scan:latest`
 
+TLDR;
+```
+curl -Ls inline-scan.bradytodhunter.com | bash -s -- -p alpine:latest
+
+# FIX BEFORE PUBLISH
+# I would like to set this up like the link above.
+curl -Ls scan.ancho.re | bash -s -- -p alpine:latest
+```
 
 # Using the inline_scan script
 We have included a wrapper script for easily interacting with our inline-scan container. All that is required on your system to use this script is Docker & BASH.
@@ -45,7 +54,7 @@ All the following examples can be found in this repository - https://github.com/
 ## CircleCI implementation
 CircleCI version 2.0+ allows native docker command execution with the `setup_remote_docker` job step. By using this functionality combined with an official `docker:stable` image, we can build, scan, and push our images within the same job. 
 
-This workflow requires the following environment variables - `DOCKER_USER, DOCKER_PASS` - to be set in a context called `dockerhub` in your CircleCI account settings at `settings -> context -> create`
+This workflow requires the `DOCKER_USER` & `DOCKER_PASS` environment variables to be set in a context called `dockerhub` in your CircleCI account settings at `settings -> context -> create`
 
 #### config.yml - [Github Link](https://github.com/Btodhunter/ci-demos/blob/master/.circleci/config.yml)
 ```yaml
@@ -120,7 +129,7 @@ container_build:
 ## CodeShip implementation
 CodeShip allows docker command execution by default, so the inline_scan script runs on the `docker:stable-git` image without any additional configuration. By specifying the `-f` option on the inline_scan script, this job ensures that an image which fails it's Anchore policy evaluation will not be pushed to the registry. To ensure adherence to the organizations security compliance policy, a custom policy bundle can be utilized for this scan by passing the `-b <POLICY_BUNDLE_FILE>` option to the inline_scan script.
 
-This job requires creating an encrypted environment variable file for loading the `DOCKER_USER & DOCKER_PASS` variables into your job. See - [Encrypting CodeShip Environment Variables](https://documentation.codeship.com/pro/builds-and-configuration/environment-variables/#encrypted-environment-variables).
+This job requires creating an encrypted environment variable file for loading the `DOCKER_USER` & `DOCKER_PASS` variables into your job. See - [Encrypting CodeShip Environment Variables](https://documentation.codeship.com/pro/builds-and-configuration/environment-variables/#encrypted-environment-variables).
 
 #### codeship-services.yml - [Github Link](https://github.com/Btodhunter/ci-demos/blob/master/codeship-services.yml)
 ```yaml
@@ -192,7 +201,7 @@ pipeline{
 ```
 
 ## TravisCI implementation
-TravisCI allows docker command execution by default, so integrating the Anchore Engine is as simple as adding the inline_scan script to your existing image build pipeline, before pushing the image to your registry of choice. 
+TravisCI allows docker command execution by default, so integrating Anchore Engine is as simple as adding the inline_scan script to your existing image build pipeline, before pushing the image to your registry of choice. 
 
 The `DOCKER_USER` & `DOCKER_PASS` environment variables must be setup in the TravisCI console at `repository -> settings -> environment variables`
 
@@ -215,7 +224,9 @@ script:
 ```
 
 ## AWS CodeBuild implementation
+AWS CodeBuild supports docker command execution by default. The Anchore inline_scan script can be implemented right into your pipeline before the image is pushed to it's registry.
 
+The `DOCKER_USER`, `DOCKER_PASS`, `IMAGE_NAME`, & `IMAGE_TAG` environment variables must be set in the CodeBuild console at `Build Projects -> <PROJECT_NAME> -> Edit Environment -> Additional Config -> Environment Variables`
 
 #### buildspec.yml - [Github Link](https://github.com/Btodhunter/ci-demos/blob/master/buildspec.yml)
 ```yaml
@@ -289,6 +300,7 @@ steps:
 ```
 
 ## GitLab implementation
+To speed up your image analysis time, you can setup the anchore/inline-scan on GitLab to run as a service. This also allows you to run other tests with the image in parallel with the image scan.
 
 #### .gitlab-ci.yml - [Github Link](https://github.com/Btodhunter/ci-demos/blob/master/.gitlab-ci.yml)
 ```yaml
