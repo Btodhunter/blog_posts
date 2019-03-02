@@ -1,7 +1,7 @@
 # Introducing the Anchore Engine inline scan!
 
 
-# Using the Anchore Engine inline scan script
+# Using the inline_scan script
 We have included a wrapper script for easily interacting with our inline-scan container. All that is required on your system to use this script is Docker & BASH.
 
 To run the script on your workstation, run it directly from Github using the following command.
@@ -12,38 +12,40 @@ To run the script on your workstation, run it directly from Github using the fol
 
 ## Examples
 
-Pull multiple images from DockerHub, scan and generate reports.
+Pull multiple images from DockerHub, scan and generate reports in $PWD/anchore-reports.
 ```bash
 curl -s https://raw.githubusercontent.com/anchore/ci-tools/master/scripts/inline_scan | bash -s -- -p -r alpine:latest ubuntu:latest centos:latest
 ```
 
-Pass Dockerfile to image scan, after docker build.
+Pass Dockerfile to local image scan, after docker build.
 ```bash
 docker build -t example-image:latest -f ./Dockerfile .
-curl ... | bash -s -- -d ./Dockerfile example-image:latest
+curl -s "https://raw.githubusercontent.com/anchore/ci-tools/master/scripts/inline_scan" | bash -s -- -d ./Dockerfile example-image:latest
 ```
 
-Scan image using custom policy bundle, fail script if policy evaluation doesn't pass.
+Scan local image using custom policy bundle, fail script if policy evaluation doesn't pass.
 ```bash
-curl ... | bash -s -- -f -b ./policy-bundle.json example-image:latest
+curl -s "https://raw.githubusercontent.com/anchore/ci-tools/master/scripts/inline_scan" | bash -s -- -f -b ./policy-bundle.json example-image:latest
 ```
 
-Save docker image archives to a directory. Then mount entire directory for analysis, custom timeout set to 500s.
+Save local docker image archives to a directory. Then mount entire directory for analysis, with a custom timeout set to 500s.
 ```bash
 mkdir images
 docker save example-image:latest -o images/example-image+latest.tar
 docker save example-image:dev -o images/example-image+dev.tar
-curl ... | bash -s -- -v ./images -t 500
+curl -s "https://raw.githubusercontent.com/anchore/ci-tools/master/scripts/inline_scan" | bash -s -- -v ./images -t 500
 ```
 
-# Using the inline_scan script in your CI/CD Pipeline
+# Implementing the inline_scan script into your CI/CD Pipeline
 
-This same fundamental concept can be utilized on any CI/CD platform that allows you to execute docker commands. In this post we'll be going over some examples of using the new Anchore Engine inline scan on most of the popular CI/CD platforms.
+This same fundamental concept can be utilized on any CI/CD platform that allows you to execute docker commands. In this post we'll be going over some examples of using the new Anchore Engine inline scan on a handful of popular CI/CD platforms.
 
 All the following examples can be found in this repository - https://github.com/Btodhunter/ci-demos
 
 ## CircleCI implementation
-CircleCI version 2.0+ allows native docker command execution with the `setup_remote_docker` job step. By using this functionality combined with an official `docker:stable` image, we can build, scan, and push our images within the same job. This workflow requires the following environment variables - `DOCKER_USER, DOCKER_PASS` - to be set in a context called `dockerhub` in your CircleCI account settings at `settings -> context -> create`
+CircleCI version 2.0+ allows native docker command execution with the `setup_remote_docker` job step. By using this functionality combined with an official `docker:stable` image, we can build, scan, and push our images within the same job. 
+
+This workflow requires the following environment variables - `DOCKER_USER, DOCKER_PASS` - to be set in a context called `dockerhub` in your CircleCI account settings at `settings -> context -> create`
 
 #### config.yml - [Github Link](https://github.com/Btodhunter/ci-demos/blob/master/.circleci/config.yml)
 ```yaml
@@ -83,7 +85,7 @@ workflows:
 ```
 
 ## GitLab implementation
-GitLab allows docker command execution through the use of a `docker:dind` image as a service. This job pushes the image to the GitLab registry, using built-in environment variables for specifying the image name and registry login credentials. Reports are generated using the `-r` option, which are then passed as artifacts to be stored in GitLab. To prevent premature timeouts, the timeout has been increased to 500s with the `-t` option.
+GitLab allows docker command execution through a `docker:dind` service container. This job pushes the image to the GitLab registry, using built-in environment variables for specifying the image name and registry login credentials. Reports are generated using the `-r` option, which are then passed as artifacts to be stored in GitLab. To prevent premature timeouts, the timeout has been increased to 500s with the `-t` option.
 
 #### .gitlab-ci.yml - [Github Link](https://github.com/Btodhunter/ci-demos/blob/master/.gitlab-ci.yml)
 ```yaml
@@ -118,6 +120,8 @@ container_build:
 ## CodeShip implementation
 CodeShip allows docker command execution by default, so the inline_scan script runs on the `docker:stable-git` image without any additional configuration. By specifying the `-f` option on the inline_scan script, this job ensures that an image which fails it's Anchore policy evaluation will not be pushed to the registry. To ensure adherence to the organizations security compliance policy, a custom policy bundle can be utilized for this scan by passing the `-b <POLICY_BUNDLE_FILE>` option to the inline_scan script.
 
+This job requires creating an encrypted environment variable file for loading the `DOCKER_USER & DOCKER_PASS` variables into your job. See - [Encrypting CodeShip Environment Variables](https://documentation.codeship.com/pro/builds-and-configuration/environment-variables/#encrypted-environment-variables).
+
 #### codeship-services.yml - [Github Link](https://github.com/Btodhunter/ci-demos/blob/master/codeship-services.yml)
 ```yaml
 dind:
@@ -145,6 +149,11 @@ dind:
 ```
 
 ## Jenkins pipeline implementation
+Jenkins setup with the Docker, BlueOcean, and Pipeline plugins supports docker command execution using the `sh` directive. By using the `-d` option with the inline_scan script, you can pass your Dockerfile to anchore-engine for policy evaluation. This example is using the declarative Jenkins pipeline syntax.
+
+To allow pushing to a private registry, the `dockerhub-creds` credentials must be created in the Jenkins server settings at - `Jenkins -> Credentials -> System -> Global credentials -> Add Credentials`
+
+This example was tested against the Jenkins installation detailed here - [Jenkins Pipeline Docs](https://jenkins.io/doc/tutorials/build-a-multibranch-pipeline-project/#run-jenkins-in-docker)
 
 #### Jenkinsfile - [Github Link](https://github.com/Btodhunter/ci-demos/blob/master/Jenkinsfile)
 ```groovy
@@ -167,7 +176,7 @@ pipeline{
         stage('Scan') {
             steps {        
                 sh 'apk add bash curl'
-                sh 'curl -s https://raw.githubusercontent.com/anchore/ci-tools/master/scripts/inline_scan | bash -s -- -d ./Dockerfile ${IMAGE_NAME}:ci'
+                sh 'curl -s https://raw.githubusercontent.com/anchore/ci-tools/master/scripts/inline_scan | bash -s -- -d ./Dockerfile -b ./.anchore_policy.json ${IMAGE_NAME}:ci'
             }
         }
         stage('Push Image') {
@@ -183,6 +192,10 @@ pipeline{
 ```
 
 ## TravisCI implementation
+TravisCI allows docker command execution by default, so integrating the Anchore Engine is as simple as adding the inline_scan script to your existing image build pipeline, before pushing the image to your registry of choice. 
+
+The `DOCKER_USER` & `DOCKER_PASS` environment variables must be setup in the TravisCI console at `repository -> settings -> environment variables`
+
 #### .travis.yml - [Github Link](https://github.com/Btodhunter/ci-demos/blob/master/.travis.yml)
 ```yaml
 language: node_js
@@ -202,6 +215,8 @@ script:
 ```
 
 ## AWS CodeBuild implementation
+
+
 #### buildspec.yml - [Github Link](https://github.com/Btodhunter/ci-demos/blob/master/buildspec.yml)
 ```yaml
 version: 0.2
@@ -213,16 +228,16 @@ phases:
 
   post_build:
     commands:
-      - curl -s https://raw.githubusercontent.com/anchore/ci-tools/master/scripts/inline_scan | bash -s -- -f ${IMAGE_NAME}:${IMAGE_TAG}
+      - curl -s https://raw.githubusercontent.com/anchore/ci-tools/master/scripts/inline_scan | bash -s -- ${IMAGE_NAME}:${IMAGE_TAG}
       - echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
       - docker push ${IMAGE_NAME}:${IMAGE_TAG}
 ```
 
 # Running the Anchore inline-scan container as a service
-For CI/CD tools that don't support access to the docker daemon, the anchore/inline-scan container can be stood up as a service within your pipeline infrastructure. This allows interaction with anchore engine as though it was running on premises, but without the need to manage any of the infrastructure. On certain platforms (such as GitLab) this method can offer better performance over using the inline_scan script.
+For CI/CD tools that do not allow docker command execution, the anchore/inline-scan container can be utilized as a service within your pipeline infrastructure. This allows interaction with anchore engine as though it was running on premises, but without the need to manage any of the infrastructure. On certain platforms (such as GitLab) this method can offer better performance over using the inline_scan script. 
 
 ## CodeFresh implementation
-For this job to run successfully, the following environment variables must be setup - `IMAGE_NAME, IMAGE_TAG, DOCKER_USER, DOCKER_PASS`. These variables can be set in the CodeFresh console at `settings -> pipelines -> environment variables`. This method also requires setting up a CodeFresh image registry token at `user settings -> codefresh registry -> generate`, this token can then be used in the `DOCKER_PASS` variable to give anchore engine pull permissions.
+This job requires that the following environment variables are set - `IMAGE_NAME, IMAGE_TAG, DOCKER_USER, DOCKER_PASS`. These variables can be setup in the CodeFresh console at `settings -> pipelines -> environment variables`. This method also requires creating a CodeFresh image registry token at `user settings -> codefresh registry -> generate`, this token can then be used in the `DOCKER_PASS` variable, which will be used to give anchore engine pull privileges.
 
 #### codefresh.yml - [Github Link](https://github.com/Btodhunter/ci-demos/blob/master/codefresh.yml)
 ```yaml
@@ -258,7 +273,7 @@ steps:
           - IMAGE_TAG=${{IMAGE_TAG}}
           - DOCKER_USER=${{DOCKER_USER}}
           - DOCKER_PASS=${{DOCKER_PASS}}
-        command: bash -xc 'anchore-cli system wait && anchore-cli registry add r.cfcr.io $DOCKER_USER $DOCKER_PASS --skip-validate && anchore_ci_tools.py -a -r --image r.cfcr.io/btodhunter/${IMAGE_NAME}:ci'
+        command: bash -xc 'anchore-cli system wait && anchore-cli registry add r.cfcr.io $DOCKER_USER $DOCKER_PASS --skip-validate && anchore_ci_tools.py -a --timeout 500 --image r.cfcr.io/btodhunter/${IMAGE_NAME}:ci'
     composition_variables:
       - IMAGE_NAME=${{IMAGE_NAME}}
       - IMAGE_TAG=${{IMAGE_TAG}}
@@ -274,6 +289,7 @@ steps:
 ```
 
 ## GitLab implementation
+
 #### .gitlab-ci.yml - [Github Link](https://github.com/Btodhunter/ci-demos/blob/master/.gitlab-ci.yml)
 ```yaml
 variables:
@@ -310,7 +326,7 @@ container_scan_service:
   
   script:
   - anchore-cli system wait
-  - anchore-cli --u admin --p foobar registry add "$CI_REGISTRY" gitlab-ci-token "$CI_JOB_TOKEN" --skip-validate 
+  - anchore-cli registry add "$CI_REGISTRY" gitlab-ci-token "$CI_JOB_TOKEN" --skip-validate 
   - anchore_ci_tools.py -a -r --timeout 500 --image $IMAGE_NAME
 
   artifacts:
