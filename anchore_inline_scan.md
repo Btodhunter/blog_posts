@@ -1,6 +1,4 @@
 # Introducing the Anchore Engine inline scan!
-Anchore Engine is now available as an all-in-one stateless container - `anchore/inline-scan:latest`
-
 TLDR;
 ```
 curl -Ls inline-scan.bradytodhunter.com | bash -s -- -p alpine:latest
@@ -9,6 +7,15 @@ curl -Ls inline-scan.bradytodhunter.com | bash -s -- -p alpine:latest
 # I would like to set this up like the link above.
 curl -Ls scan.ancho.re | bash -s -- -p alpine:latest
 ```
+
+With anchore-engine, users can scan container images to generate reports against several aspects of the container image - vulnerability scans, content reports (files, OS packages, language packages, etc), fully customized policy evaluations (dockerfile checks, OSS license checks, software package checks, security checks, and many more). With these capabilities, users have integrated an anchore-engine image scan into CI/CD build processes for both reporting and/or control decision purposes, as anchore policy evaluations include a 'pass/fail' result alongside a full report upon policy execution.  
+
+Up until now, the general setup required to achieve such an integration has included the requirement to stand up an anchore-engine service, with it's API exposed to your CI/CD build process, and make thin anchore API client calls from the build process to the centralized anchore-engine deployment.  Generally, the flow starts with an API call to 'add' an image to anchore-engine via an API call to the engine, at which point the engine will pull the referenced image from a docker v2 registry, and then perform report generation queries and/or policy evaluation calls.  This method is still fully supported, and in many cases is a good architecture for integrating anchore into your CI/CD platform. However, there are other use cases where the same result is desired (image scans, policy evaluations, content reports, etc), but for a variety of reasons it is impractical for the user to operate a centralized, managed and stable anchore-engine deployment that is available to CI/CD build processes.  
+
+To accommodate this cases, we are introducing a new way to interact with anchore to get image scans, evals, and content reports without requiring a central anchore-engine deployment to be available.  We call this new approach 'inline scan', to indicate that a single, one-time scan can be performed 'inline' against a local container image at any time, without the need for any persistent data or service state between scans.  Using this approach (which ultimately uses exactly the same analysis/vulnerability/policy evaluation and reporting functions of anchore-engine), users can achieve an integration with anchore that moves the analysis/scanning work to a local container process that can be run during container
+image build, after an image has been built but before it is pushed to any registry.  
+
+With this new functionality, we hope to provide another approach for users to get deep analysis, scanning and policy evaluation capabilities of anchore in situations where operating an central anchore-engine service is impractical.
 
 # Using the inline_scan script
 We have included a wrapper script for easily interacting with our inline-scan container. All that is required on your system to use this script is Docker & BASH.
