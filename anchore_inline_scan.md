@@ -1,26 +1,22 @@
 # Introducing the Anchore Engine inline scan!
 TLDR;
 ```
-curl -Ls inline-scan.bradytodhunter.com | bash -s -- -p alpine:latest
-
-# FIX BEFORE PUBLISH
-# I would like to set this up like the link above.
-curl -Ls scan.ancho.re | bash -s -- -p alpine:latest
+curl -s https://raw.githubusercontent.com/anchore/ci-tools/master/scripts/inline_scan | bash -s -- -p alpine:latest
 ```
 
 With anchore-engine, users can scan container images to generate reports against several aspects of the container image - vulnerability scans, content reports (files, OS packages, language packages, etc), fully customized policy evaluations (dockerfile checks, OSS license checks, software package checks, security checks, and many more). With these capabilities, users have integrated an anchore-engine image scan into CI/CD build processes for both reporting and/or control decision purposes, as anchore policy evaluations include a 'pass/fail' result alongside a full report upon policy execution.  
 
 Up until now, the general setup required to achieve such an integration has included the requirement to stand up an anchore-engine service, with it's API exposed to your CI/CD build process, and make thin anchore API client calls from the build process to the centralized anchore-engine deployment.  Generally, the flow starts with an API call to 'add' an image to anchore-engine via an API call to the engine, at which point the engine will pull the referenced image from a docker v2 registry, and then perform report generation queries and/or policy evaluation calls.  This method is still fully supported, and in many cases is a good architecture for integrating anchore into your CI/CD platform. However, there are other use cases where the same result is desired (image scans, policy evaluations, content reports, etc), but for a variety of reasons it is impractical for the user to operate a centralized, managed and stable anchore-engine deployment that is available to CI/CD build processes.  
 
-To accommodate this cases, we are introducing a new way to interact with anchore to get image scans, evals, and content reports without requiring a central anchore-engine deployment to be available.  We call this new approach 'inline scan', to indicate that a single, one-time scan can be performed 'inline' against a local container image at any time, without the need for any persistent data or service state between scans.  Using this approach (which ultimately uses exactly the same analysis/vulnerability/policy evaluation and reporting functions of anchore-engine), users can achieve an integration with anchore that moves the analysis/scanning work to a local container process that can be run during container
-image build, after an image has been built but before it is pushed to any registry.  
+To accommodate these cases, we are introducing a new way to interact with anchore to get image scans, evals, and content reports without requiring a central anchore-engine deployment to be available.  We call this new approach 'inline scan', to indicate that a single, one-time scan can be performed 'inline' against a local container image at any time, without the need for any persistent data or service state between scans.  Using this approach (which ultimately uses exactly the same analysis/vulnerability/policy evaluation and reporting functions of anchore-engine), users can achieve an integration with anchore that moves the analysis/scanning work to a local container process that can be run during container
+image build pipeline, after an image has been built but before it is pushed to any registry.  
 
 With this new functionality, we hope to provide another approach for users to get deep analysis, scanning and policy evaluation capabilities of anchore in situations where operating an central anchore-engine service is impractical.
 
 # Using the inline_scan script
 We have included a wrapper script for easily interacting with our inline-scan container. All that is required on your system to use this script is Docker & BASH.
 
-To run the script on your workstation, run it directly from Github using the following command.
+To run the script on your workstation, run it directly from Github using the following command syntax.
   
   ```
   curl -s https://raw.githubusercontent.com/anchore/ci-tools/master/scripts/inline_scan | bash -s -- [options] <IMAGE_NAME>
@@ -39,7 +35,7 @@ docker build -t example-image:latest -f ./Dockerfile .
 curl -s "https://raw.githubusercontent.com/anchore/ci-tools/master/scripts/inline_scan" | bash -s -- -d ./Dockerfile example-image:latest
 ```
 
-Scan local image using custom policy bundle, fail script if policy evaluation doesn't pass.
+Scan local image using a custom policy bundle, fail script if policy evaluation doesn't pass.
 ```bash
 curl -s "https://raw.githubusercontent.com/anchore/ci-tools/master/scripts/inline_scan" | bash -s -- -f -b ./policy-bundle.json example-image:latest
 ```
@@ -134,7 +130,7 @@ container_build:
 ```
 
 ## CodeShip implementation
-CodeShip allows docker command execution by default, so the inline_scan script runs on the `docker:stable-git` image without any additional configuration. By specifying the `-f` option on the inline_scan script, this job ensures that an image which fails it's Anchore policy evaluation will not be pushed to the registry. To ensure adherence to the organizations security compliance policy, a custom policy bundle can be utilized for this scan by passing the `-b <POLICY_BUNDLE_FILE>` option to the inline_scan script.
+CodeShip allows docker command execution by default, allowing the inline_scan script to run on the `docker:stable-git` image without any additional configuration. By specifying the `-f` option on the inline_scan script, this job ensures that an image which fails it's Anchore policy evaluation will not be pushed to the registry. To ensure adherence to the organization's security compliance policy, a custom policy bundle can be utilized for this scan by passing the `-b <POLICY_BUNDLE_FILE>` option to the inline_scan script.
 
 This job requires creating an encrypted environment variable file for loading the `DOCKER_USER` & `DOCKER_PASS` variables into your job. See - [Encrypting CodeShip Environment Variables](https://documentation.codeship.com/pro/builds-and-configuration/environment-variables/#encrypted-environment-variables).
 
@@ -252,10 +248,10 @@ phases:
 ```
 
 # Running the Anchore inline-scan container as a service
-For CI/CD tools that do not allow docker command execution, the anchore/inline-scan container can be utilized as a service within your pipeline infrastructure. This allows interaction with anchore engine as though it was running on premises, but without the need to manage any of the infrastructure. On certain platforms (such as GitLab) this method can offer better performance over using the inline_scan script. 
+For CI/CD tools that do not allow docker command execution, the anchore/inline-scan container can be utilized as a service within your pipeline infrastructure. This allows interaction with anchore engine as though it was running on premises, but without the need to manage any of the infrastructure. On certain platforms (such as GitLab) this method can offer better performance over using the inline_scan wrapper script. 
 
 ## CodeFresh implementation
-This job requires that the following environment variables are set - `IMAGE_NAME, IMAGE_TAG, DOCKER_USER, DOCKER_PASS`. These variables can be setup in the CodeFresh console at `settings -> pipelines -> environment variables`. This method also requires creating a CodeFresh image registry token at `user settings -> codefresh registry -> generate`, this token can then be used in the `DOCKER_PASS` variable, which will be used to give anchore engine pull privileges.
+This job requires that the following environment variables are set - `IMAGE_NAME, IMAGE_TAG, DOCKER_USER, DOCKER_PASS`. These variables can be setup in the CodeFresh console at `settings -> pipelines -> environment variables`. This method also requires creating a CodeFresh image registry token at `user settings -> codefresh registry -> generate`, this token can then be used in the `DOCKER_PASS` variable, which is utilized to give anchore engine pull privileges to the CodeFresh registry.
 
 #### codefresh.yml - [Github Link](https://github.com/Btodhunter/ci-demos/blob/master/codefresh.yml)
 ```yaml
