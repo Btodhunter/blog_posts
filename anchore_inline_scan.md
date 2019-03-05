@@ -13,7 +13,7 @@ To accommodate these cases, we are introducing a new way to interact with anchor
 With this new functionality, we hope to provide another approach for users to get deep analysis, scanning and policy evaluation capabilities of anchore in situations where operating an central anchore-engine service is impractical.
 
 # Using the inline_scan script
-To make using our inline-scan container as easy as possible, we have provided a simple wrapper script called inline_scan. The only requirements to run the inline_scan script is the ability to execute Docker commands & bash. We host a versioned copy of this script that can be downloaded directly with curl and executed in a bash pipeline, providing you with image inspection, reporting and policy enforcement with one command.
+To make using our inline-scan container as easy as possible, we have provided a simple wrapper script called inline_scan. The only requirements to run the inline_scan script is the ability to execute Docker commands & bash. We host a versioned copy of this script that can be downloaded directly with curl and executed in a bash pipeline, providing you image inspection, reporting and policy enforcement with one command.
 
 To run the script on your workstation, use the following command syntax.
   
@@ -61,7 +61,7 @@ curl -s https://ci-tools.anchore.io/inline_scan-v0.3.3 | bash -s -- -v ./images 
 
 This same functionality can be utilized on any CI/CD platform that allows execution of Docker commands. The remainder of this post will be going over implementations of the anchore inline scan on a variety of popular CI/CD platforms.
 
-All of the following examples can be found in this repository - https://github.com/Btodhunter/ci-demos
+All of the following examples can be found in this [repository](https://github.com/Btodhunter/ci-demos).
 
 ## CircleCI implementation
 CircleCI version 2.0+ allows native docker command execution with the `setup_remote_docker` job step. By using this functionality combined with an official `docker:stable` image, we can build, scan, and push our images within the same job. We will also create reports and save them as artifacts within CircleCI. These reports are all created in json format, allowing easy aggregation from CircleCI into your preferred reporting tool.
@@ -151,7 +151,7 @@ container_build:
 ```
 
 ## CodeShip implementation
-Docker command execution is enabled by default in CodeShip, which allows the inline_scan script to run on the `docker:stable-git` image without any additional configuration. By specifying the `-f` option on the inline_scan script, this job ensures that an image which fails it's anchore policy evaluation will not be pushed to the registry. To ensure adherence to the organization's security compliance policy, a custom policy bundle can be utilized for this scan by passing the `-b <POLICY_BUNDLE_FILE>` option to the inline_scan script.
+Docker command execution is enabled by default in CodeShip, which allows the inline_scan script to run on the `docker:stable` image without any additional configuration. By specifying the `-f` option on the inline_scan script, this job ensures that an image which fails it's anchore policy evaluation will not be pushed to the registry. To ensure adherence to the organization's security compliance policy, a custom policy bundle can be utilized for this scan by passing the `-b <POLICY_BUNDLE_FILE>` option to the inline_scan script.
 
 This job requires creating an encrypted environment variable file for loading the `DOCKER_USER` & `DOCKER_PASS` variables into your job. See - [Encrypting CodeShip Environment Variables](https://documentation.codeship.com/pro/builds-and-configuration/environment-variables/#encrypted-environment-variables).
 
@@ -269,8 +269,13 @@ phases:
 ```
 
 # Summary
-As you can see from the above examples, the new inline scan makes it easier then ever to implement Anchore Engine image analysis in your Docker build pipeline! You can scan local images before pushing them into a registry, allowing you to inject scans directly into your current workflows. The inline_scan script makes it simple to include your Dockerfile to ensure best practices, activate fine-grained custom policy bundles for custom evaluations, or even pull an image directly from a remote registry for scanning. 
+As you can see from the above examples, the new inline scan makes it easier then ever to implement Anchore Engine image analysis in your Docker build pipeline! You can scan local images before pushing them into a registry, allowing you to inject scans directly into your current workflows. The inline_scan script makes it simple to ensure your Dockerfile meets best practices, perform fine-grained custom policy evaluations, and even pull an image directly from a remote registry for scanning. Anchore inline scan is a zero friction solution for ensuring that only secure images make it through your build pipeline and get into production. Add it to your pipeline today!
 
-Implementing open-source, best in class image analysis and policy evaluation can now be done in just one line. The Anchore inline scan is a zero friction solution for ensuring that only secure images make it through your build pipeline and into production. Add it to your pipeline today!
+Anchore Engine is an open source project, all issues and contribution details can be found on Github. We look forward to receiving feedback and contributions from our users!
 
-The Anchore Inline Scan is an open source project, all issues and/or contributions can be added on [github](https://github.com/anchore/ci-tools). We look forward to receiving feedback and contributions from our users!
+## Links
+[Github - Anchore Engine](https://github.com/anchore/anchore-engine)
+
+[Github - Inline Scan](https://github.com/anchore/ci-tools)
+
+[Github - CI Demos](https://github.com/Btodhunter/ci-demos)
